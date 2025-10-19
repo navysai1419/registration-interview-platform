@@ -23,6 +23,10 @@ const RegistrationPage = () => {
   const [colleges, setColleges] = useState([]);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [focusedField, setFocusedField] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const qualifications = [
@@ -55,15 +59,268 @@ const RegistrationPage = () => {
   ];
 
   useEffect(() => {
-    fetch('http://52.87.175.51:8000/admin/colleges')
+    fetch('https://api.devtalent.securxperts.com:8000/admin/colleges')
       .then(res => res.json())
       .then(data => setColleges(data))
       .catch(err => console.error(err));
   }, []);
 
+  const validateField = (name) => {
+    let newError = '';
+
+    switch (name) {
+      case 'name':
+        if (!formData.name.trim()) {
+          newError = 'Full name is required';
+        } else if (formData.name.trim().length < 2) {
+          newError = 'Name must be at least 2 characters long';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
+          newError = 'Name can only contain letters and spaces';
+        }
+        break;
+      case 'email':
+        if (!formData.email.trim()) {
+          newError = 'Email is required';
+        } else if (!/^[^\s@]+@gmail\.com$/i.test(formData.email.trim())) {
+          newError = 'Email must be a valid Gmail address';
+        }
+        break;
+      case 'phone':
+        if (!formData.phone) {
+          newError = 'Phone number is required';
+        } else if (!/^\d{10}$/.test(formData.phone)) {
+          newError = 'Phone number must be exactly 10 digits';
+        }
+        break;
+      case 'country':
+        if (!formData.country.trim()) {
+          newError = 'Country is required';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.country.trim())) {
+          newError = 'Country can only contain letters and spaces';
+        }
+        break;
+      case 'educational_status':
+        if (!formData.educational_status.trim()) {
+          newError = 'Educational status is required';
+        } else if (formData.educational_status.trim().length < 2) {
+          newError = 'Educational status must be at least 2 characters long';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.educational_status.trim())) {
+          newError = 'Educational status can only contain letters and spaces';
+        }
+        break;
+      case 'qualification':
+        if (!formData.qualification) {
+          newError = 'Qualification is required';
+        }
+        break;
+      case 'passedout_year':
+        if (!formData.passedout_year) {
+          newError = 'Passed out year is required';
+        } else if (!/^\d{4}$/.test(formData.passedout_year)) {
+          newError = 'Year must be exactly 4 digits';
+        }
+        break;
+      case 'interest':
+        if (!formData.interest) {
+          newError = 'Area of interest is required';
+        }
+        break;
+      case 'state':
+        if (!formData.state.trim()) {
+          newError = 'State is required';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.state.trim())) {
+          newError = 'State can only contain letters and spaces';
+        }
+        break;
+      case 'city':
+        if (!formData.city.trim()) {
+          newError = 'City is required';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.city.trim())) {
+          newError = 'City can only contain letters and spaces';
+        }
+        break;
+      case 'college_name':
+        if (!formData.college_name) {
+          newError = 'College/University is required';
+        }
+        break;
+      default:
+        break;
+    }
+
+    setErrors(prev => ({ ...prev, [name]: newError }));
+    return !newError;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error for this field on change
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleEducationalStatusChange = (e) => {
+    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+    setFormData(prev => ({ ...prev, educational_status: value }));
+    if (errors.educational_status) {
+      setErrors(prev => ({ ...prev, educational_status: '' }));
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 10) {
+      setFormData(prev => ({ ...prev, phone: value }));
+      if (errors.phone) {
+        setErrors(prev => ({ ...prev, phone: '' }));
+      }
+    }
+  };
+
+  const handleYearChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 4) {
+      setFormData(prev => ({ ...prev, passedout_year: value }));
+      if (errors.passedout_year) {
+        setErrors(prev => ({ ...prev, passedout_year: '' }));
+      }
+    }
+  };
+
+  const handleOtpChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 6) {
+      setOtp(value);
+      setOtpError('');
+    }
+  };
+
+  const getFieldStyle = (name, baseStyle, focusStyle) => {
+    let style = baseStyle;
+    if (focusedField === name) {
+      style = { ...focusStyle };
+    }
+    if (touched[name] && errors[name]) {
+      style = {
+        ...style,
+        borderColor: '#dc3545',
+        boxShadow: '0 0 0 3px rgba(220, 53, 69, 0.1)'
+      };
+    }
+    return style;
+  };
+
+  const handleFocusField = (name) => {
+    setFocusedField(name);
+  };
+
+  const handleBlurField = (name) => {
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name);
+    setFocusedField(null);
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    let isValid = true;
+
+    Object.keys(formData).forEach(field => {
+      let fieldError = '';
+      // same switch logic as validateField, but set fieldError
+      switch (field) {
+        case 'name':
+          if (!formData.name.trim()) {
+            fieldError = 'Full name is required';
+          } else if (formData.name.trim().length < 2) {
+            fieldError = 'Name must be at least 2 characters long';
+          } else if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
+            fieldError = 'Name can only contain letters and spaces';
+          }
+          break;
+        case 'email':
+          if (!formData.email.trim()) {
+            fieldError = 'Email is required';
+          } else if (!/^[^\s@]+@gmail\.com$/i.test(formData.email.trim())) {
+            fieldError = 'Email must be a valid Gmail address';
+          }
+          break;
+        case 'phone':
+          if (!formData.phone) {
+            fieldError = 'Phone number is required';
+          } else if (!/^\d{10}$/.test(formData.phone)) {
+            fieldError = 'Phone number must be exactly 10 digits';
+          }
+          break;
+        case 'country':
+          if (!formData.country.trim()) {
+            fieldError = 'Country is required';
+          } else if (!/^[a-zA-Z\s]+$/.test(formData.country.trim())) {
+            fieldError = 'Country can only contain letters and spaces';
+          }
+          break;
+        case 'educational_status':
+          if (!formData.educational_status.trim()) {
+            fieldError = 'Educational status is required';
+          } else if (formData.educational_status.trim().length < 2) {
+            fieldError = 'Educational status must be at least 2 characters long';
+          } else if (!/^[a-zA-Z\s]+$/.test(formData.educational_status.trim())) {
+            fieldError = 'Educational status can only contain letters and spaces';
+          }
+          break;
+        case 'qualification':
+          if (!formData.qualification) {
+            fieldError = 'Qualification is required';
+          }
+          break;
+        case 'passedout_year':
+          if (!formData.passedout_year) {
+            fieldError = 'Passed out year is required';
+          } else if (!/^\d{4}$/.test(formData.passedout_year)) {
+            fieldError = 'Year must be exactly 4 digits';
+          }
+          break;
+        case 'interest':
+          if (!formData.interest) {
+            fieldError = 'Area of interest is required';
+          }
+          break;
+        case 'state':
+          if (!formData.state.trim()) {
+            fieldError = 'State is required';
+          } else if (!/^[a-zA-Z\s]+$/.test(formData.state.trim())) {
+            fieldError = 'State can only contain letters and spaces';
+          }
+          break;
+        case 'city':
+          if (!formData.city.trim()) {
+            fieldError = 'City is required';
+          } else if (!/^[a-zA-Z\s]+$/.test(formData.city.trim())) {
+            fieldError = 'City can only contain letters and spaces';
+          }
+          break;
+        case 'college_name':
+          if (!formData.college_name) {
+            fieldError = 'College/University is required';
+          }
+          break;
+      }
+      if (fieldError) {
+        newErrors[field] = fieldError;
+        isValid = false;
+      }
+    });
+
+    setErrors(newErrors);
+    if (!isValid) {
+      const errorFields = Object.keys(newErrors);
+      setTouched(prev => ({
+        ...prev,
+        ...errorFields.reduce((acc, key) => ({ ...acc, [key]: true }), {})
+      }));
+    }
+    return isValid;
   };
 
   const handleReset = () => {
@@ -82,6 +339,10 @@ const RegistrationPage = () => {
     });
     setOtp('');
     setError('');
+    setOtpError('');
+    setErrors({});
+    setTouched({});
+    setFocusedField(null);
   };
 
   const handleRegister = async (e) => {
@@ -89,8 +350,13 @@ const RegistrationPage = () => {
     setLoading(true);
     setError('');
 
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch('http://52.87.175.51:8000/auth/register/start', {
+      const response = await fetch('https://api.devtalent.securxperts.com:8000/auth/register/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,9 +381,16 @@ const RegistrationPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setOtpError('');
+
+    if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      setOtpError('OTP must be exactly 6 digits');
+      setLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch('http://52.87.175.51:8000/auth/register/verify', {
+      const response = await fetch('https://api.devtalent.securxperts.com:8000/auth/register/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -283,6 +556,14 @@ const RegistrationPage = () => {
     boxSizing: 'border-box'
   };
 
+  const inputFocusStyle = {
+    ...inputStyle,
+    borderColor: '#007bff',
+    outline: 'none',
+    boxShadow: '0 0 0 3px rgba(0, 123, 255, 0.1)',
+    backgroundColor: 'white'
+  };
+
   const selectStyle = {
     width: '100%',
     padding: '12px',
@@ -297,14 +578,6 @@ const RegistrationPage = () => {
     backgroundRepeat: 'no-repeat',
     backgroundSize: '16px',
     appearance: 'none'
-  };
-
-  const inputFocusStyle = {
-    ...inputStyle,
-    borderColor: '#007bff',
-    outline: 'none',
-    boxShadow: '0 0 0 3px rgba(0, 123, 255, 0.1)',
-    backgroundColor: 'white'
   };
 
   const selectFocusStyle = {
@@ -324,6 +597,13 @@ const RegistrationPage = () => {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px'
+  };
+
+  const fieldErrorStyle = {
+    color: '#dc3545',
+    fontSize: '12px',
+    marginTop: '5px',
+    paddingLeft: '40px'
   };
 
   const buttonsContainerStyle = {
@@ -418,6 +698,47 @@ const RegistrationPage = () => {
     alignItems: 'center'
   };
 
+  const getInputIcon = (name) => {
+    switch (name) {
+      case 'name': return <FaUser />;
+      case 'email': return <FaEnvelope />;
+      case 'phone': return <FaPhone />;
+      case 'country': return <FaGlobe />;
+      case 'educational_status': return <FaGraduationCap />;
+      case 'qualification': return <FaCertificate />;
+      case 'passedout_year': return <FaCalendarAlt />;
+      case 'interest': return <FaHeart />;
+      case 'state': return <FaMapMarkerAlt />;
+      case 'city': return <FaBuilding />;
+      case 'college_name': return <FaUniversity />;
+      default: return null;
+    }
+  };
+
+  const getOtpStyle = () => {
+    let style = inputStyle;
+    if (focusedField === 'otp') {
+      style = { ...inputFocusStyle };
+    }
+    if (otpError) {
+      style = {
+        ...style,
+        borderColor: '#dc3545',
+        boxShadow: '0 0 0 3px rgba(220, 53, 69, 0.1)'
+      };
+    }
+    return style;
+  };
+
+  const handleOtpBlur = () => {
+    if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      setOtpError('OTP must be exactly 6 digits');
+    } else {
+      setOtpError('');
+    }
+    setFocusedField(null);
+  };
+
   return (
     <div style={containerStyle}>
       {step === 3 ? (
@@ -439,7 +760,7 @@ const RegistrationPage = () => {
                 width: '140px' 
               }} 
             />
-            <img 
+            {/* <img 
               src={laura} 
               alt="LauraTek" 
               style={{ 
@@ -448,7 +769,7 @@ const RegistrationPage = () => {
                 right: '20px', 
                 width: '80px' 
               }} 
-            />
+            /> */}
             {step === 1 ? (
               <>
                 <h2 style={leftTitleStyle}>REGISTER NOW</h2>
@@ -477,12 +798,11 @@ const RegistrationPage = () => {
                   {/* Personal Information Column */}
                   <div style={{ ...sectionStyle, ...columnStyle }}>
                     <h3 style={sectionTitleStyle}>
-                      
                       Personal Information
                     </h3>
                     <div style={formGroupStyle}>
                       <label htmlFor="name" style={labelStyle}>
-                        
+                        {getInputIcon('name')}
                         Full Name <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -492,15 +812,16 @@ const RegistrationPage = () => {
                         placeholder="Enter your full name 😊"
                         value={formData.name}
                         onChange={handleInputChange}
+                        onFocus={() => handleFocusField('name')}
+                        onBlur={() => handleBlurField('name')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('name', inputStyle, inputFocusStyle)}
                       />
+                      {errors.name && <div style={fieldErrorStyle}>{errors.name}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="email" style={labelStyle}>
-                      
+                        {getInputIcon('email')}
                         Email Address <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -510,15 +831,16 @@ const RegistrationPage = () => {
                         placeholder="Enter your email 📧"
                         value={formData.email}
                         onChange={handleInputChange}
+                        onFocus={() => handleFocusField('email')}
+                        onBlur={() => handleBlurField('email')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('email', inputStyle, inputFocusStyle)}
                       />
+                      {errors.email && <div style={fieldErrorStyle}>{errors.email}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="phone" style={labelStyle}>
-                       
+                        {getInputIcon('phone')}
                         Phone Number <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -527,16 +849,17 @@ const RegistrationPage = () => {
                         name="phone"
                         placeholder="Enter your phone number 📱"
                         value={formData.phone}
-                        onChange={handleInputChange}
+                        onChange={handlePhoneChange}
+                        onFocus={() => handleFocusField('phone')}
+                        onBlur={() => handleBlurField('phone')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('phone', inputStyle, inputFocusStyle)}
                       />
+                      {errors.phone && <div style={fieldErrorStyle}>{errors.phone}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="country" style={labelStyle}>
-                        
+                        {getInputIcon('country')}
                         Country <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -546,23 +869,23 @@ const RegistrationPage = () => {
                         placeholder="Enter your country 🌍"
                         value={formData.country}
                         onChange={handleInputChange}
+                        onFocus={() => handleFocusField('country')}
+                        onBlur={() => handleBlurField('country')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('country', inputStyle, inputFocusStyle)}
                       />
+                      {errors.country && <div style={fieldErrorStyle}>{errors.country}</div>}
                     </div>
                   </div>
 
                   {/* Educational Background Column */}
                   <div style={{ ...sectionStyle, ...columnStyle }}>
                     <h3 style={sectionTitleStyle}>
-                      
                       Educational Background
                     </h3>
                     <div style={formGroupStyle}>
                       <label htmlFor="educational_status" style={labelStyle}>
-                       
+                        {getInputIcon('educational_status')}
                         Educational Status <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -571,16 +894,17 @@ const RegistrationPage = () => {
                         name="educational_status"
                         placeholder="e.g., Pursuing,Graduate, Post Graduate 🎓"
                         value={formData.educational_status}
-                        onChange={handleInputChange}
+                        onChange={handleEducationalStatusChange}
+                        onFocus={() => handleFocusField('educational_status')}
+                        onBlur={() => handleBlurField('educational_status')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('educational_status', inputStyle, inputFocusStyle)}
                       />
+                      {errors.educational_status && <div style={fieldErrorStyle}>{errors.educational_status}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="qualification" style={labelStyle}>
-                        
+                        {getInputIcon('qualification')}
                         Qualification <span style={{ color: 'red' }}>*</span>
                       </label>
                       <select
@@ -588,20 +912,21 @@ const RegistrationPage = () => {
                         name="qualification"
                         value={formData.qualification}
                         onChange={handleInputChange}
+                        onFocus={() => handleFocusField('qualification')}
+                        onBlur={() => handleBlurField('qualification')}
                         required
-                        style={selectStyle}
-                        onFocus={(e) => Object.assign(e.target.style, selectFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, selectStyle)}
+                        style={getFieldStyle('qualification', selectStyle, selectFocusStyle)}
                       >
                         <option value="">Select Qualification</option>
                         {qualifications.map(qual => (
                           <option key={qual} value={qual}>{qual}</option>
                         ))}
                       </select>
+                      {errors.qualification && <div style={fieldErrorStyle}>{errors.qualification}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="passedout_year" style={labelStyle}>
-                       
+                        {getInputIcon('passedout_year')}
                         Passed Out Year <span style={{ color: 'red' }}>*</span>
                       </label>
                       <input
@@ -610,16 +935,17 @@ const RegistrationPage = () => {
                         name="passedout_year"
                         placeholder="e.g., 2026 📅"
                         value={formData.passedout_year}
-                        onChange={handleInputChange}
+                        onChange={handleYearChange}
+                        onFocus={() => handleFocusField('passedout_year')}
+                        onBlur={() => handleBlurField('passedout_year')}
                         required
-                        style={inputStyle}
-                        onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                        style={getFieldStyle('passedout_year', inputStyle, inputFocusStyle)}
                       />
+                      {errors.passedout_year && <div style={fieldErrorStyle}>{errors.passedout_year}</div>}
                     </div>
                     <div style={formGroupStyle}>
                       <label htmlFor="college_name" style={labelStyle}>
-                       
+                        {getInputIcon('college_name')}
                         College/University Name <span style={{ color: 'red' }}>*</span>
                       </label>
                       <select
@@ -627,16 +953,17 @@ const RegistrationPage = () => {
                         name="college_name"
                         value={formData.college_name}
                         onChange={handleInputChange}
+                        onFocus={() => handleFocusField('college_name')}
+                        onBlur={() => handleBlurField('college_name')}
                         required
-                        style={selectStyle}
-                        onFocus={(e) => Object.assign(e.target.style, selectFocusStyle)}
-                        onBlur={(e) => Object.assign(e.target.style, selectStyle)}
+                        style={getFieldStyle('college_name', selectStyle, selectFocusStyle)}
                       >
                         <option value="">Select College</option>
                         {colleges.map(college => (
                           <option key={college.id} value={college.name}>{college.name}</option>
                         ))}
                       </select>
+                      {errors.college_name && <div style={fieldErrorStyle}>{errors.college_name}</div>}
                     </div>
                   </div>
                 </div>
@@ -644,14 +971,13 @@ const RegistrationPage = () => {
                 {/* Location and Interest Section */}
                 <div style={sectionStyle}>
                   <h3 style={sectionTitleStyle}>
-                 
                     Location & Interests
                   </h3>
                   <div style={rowStyle}>
                     <div style={columnStyle}>
                       <div style={formGroupStyle}>
                         <label htmlFor="state" style={labelStyle}>
-
+                          {getInputIcon('state')}
                           State <span style={{ color: 'red' }}>*</span>
                         </label>
                         <input
@@ -661,17 +987,18 @@ const RegistrationPage = () => {
                           placeholder="Enter your state 🗺️"
                           value={formData.state}
                           onChange={handleInputChange}
+                          onFocus={() => handleFocusField('state')}
+                          onBlur={() => handleBlurField('state')}
                           required
-                          style={inputStyle}
-                          onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                          onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                          style={getFieldStyle('state', inputStyle, inputFocusStyle)}
                         />
+                        {errors.state && <div style={fieldErrorStyle}>{errors.state}</div>}
                       </div>
                     </div>
                     <div style={columnStyle}>
                       <div style={formGroupStyle}>
                         <label htmlFor="city" style={labelStyle}>
-                         
+                          {getInputIcon('city')}
                           City <span style={{ color: 'red' }}>*</span>
                         </label>
                         <input
@@ -681,16 +1008,18 @@ const RegistrationPage = () => {
                           placeholder="Enter your city 🏙️"
                           value={formData.city}
                           onChange={handleInputChange}
+                          onFocus={() => handleFocusField('city')}
+                          onBlur={() => handleBlurField('city')}
                           required
-                          style={inputStyle}
-                          onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                          onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                          style={getFieldStyle('city', inputStyle, inputFocusStyle)}
                         />
+                        {errors.city && <div style={fieldErrorStyle}>{errors.city}</div>}
                       </div>
                     </div>
                     <div style={columnStyle}>
                       <div style={formGroupStyle}>
                         <label htmlFor="interest" style={labelStyle}>
+                          {getInputIcon('interest')}
                           Area of Interest <span style={{ color: 'red' }}>*</span>
                         </label>
                         <select
@@ -698,10 +1027,10 @@ const RegistrationPage = () => {
                           name="interest"
                           value={formData.interest}
                           onChange={handleInputChange}
+                          onFocus={() => handleFocusField('interest')}
+                          onBlur={() => handleBlurField('interest')}
                           required
-                          style={selectStyle}
-                          onFocus={(e) => Object.assign(e.target.style, selectFocusStyle)}
-                          onBlur={(e) => Object.assign(e.target.style, selectStyle)}
+                          style={getFieldStyle('interest', selectStyle, selectFocusStyle)}
                         >
                           <option value="">Select Area of Interest</option>
                           <option value="Python">Python</option>
@@ -713,6 +1042,7 @@ const RegistrationPage = () => {
                           <option value="Cloud + DevOps">Cloud + DevOps</option>
                           <option value="SQL / NO SQL">SQL / NO SQL</option>
                         </select>
+                        {errors.interest && <div style={fieldErrorStyle}>{errors.interest}</div>}
                       </div>
                     </div>
                   </div>
@@ -777,13 +1107,14 @@ const RegistrationPage = () => {
                     type="text"
                     placeholder="Enter 6-digit OTP 🔑"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value)}
+                    onChange={handleOtpChange}
+                    onFocus={() => handleFocusField('otp')}
+                    onBlur={handleOtpBlur}
                     required
                     maxLength={6}
-                    style={inputStyle}
-                    onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                    onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                    style={getOtpStyle()}
                   />
+                  {otpError && <div style={fieldErrorStyle}>{otpError}</div>}
                 </div>
                 <div style={buttonsContainerStyle}>
                   <button
